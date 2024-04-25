@@ -112,3 +112,17 @@ Run docker compose:
 ```sh
 sudo docker-compose -f compose.yml up
 ```
+
+### Docker: some useful commands to test the program
+Stop one container:
+```sh
+sudo docker kill <Container ID>
+```
+Restart one container:
+```sh
+sudo docker restart <Container ID>
+```
+Stop all containers:
+```sh
+sudo docker stop $(sudo docker ps -a -q)
+```
