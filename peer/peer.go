@@ -152,7 +152,3 @@ func main() {
 		log.Fatalf("Failed to serve process over port []: %s", err)
 	}
 }
-
-func chLamSetup() {
-
-}
