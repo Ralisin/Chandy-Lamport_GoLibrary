@@ -105,19 +105,10 @@ sudo service docker start
 Install git and clone repository
 ```sh
 sudo yum install git -y
-git clone https://github.com/Ralisin/chandy-lamport
+git clone https://github.com/Ralisin/chandyLamportLibrary
 ```
 
 Run docker compose:
 ```sh
 sudo docker-compose -f compose.yml up
 ```
-
-### Tech
-
-Language choose for development is [GoLang], and for process communication is used [gRPC]
-
-[//]: # (Reference links)
-
-[GoLang]: <https://go.dev/>
-[gRPC]: <https://grpc.io/>
