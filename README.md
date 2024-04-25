@@ -42,9 +42,12 @@ who is developing a distributed system in Go using gRPC technology.
 
 The library is designed to be used by a programmer who is developing a distributed application using the Go language and the gRPC tool.
 
+<div style="display: inline-block;">
 <img src="https://grpc.io/img/logos/grpc-logo.png" width="150" style="margin-right: 50px;" alt="gRPC">
+</div>
+<div style="display: inline-block;">
 <img src="https://go.dev/images/go-logo-white.svg" width="150"  alt="GoLang">
-
+</div>
 
 ## AWS EC2 setup
 ### PowerShell SSH
