@@ -113,6 +113,12 @@ Run docker compose:
 sudo docker-compose -f compose.yml up
 ```
 
+To simplify all the things, there is a bash file: `setup.sh`. To execute it write on the shell:
+```
+chmod +x setup.sh
+./setup.sh
+```
+
 ### Docker: some useful commands to test the program
 Stop one container:
 ```sh
