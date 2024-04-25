@@ -34,6 +34,18 @@ The process receive a marker message on channel C_{k,i}:
         P_i stor recording messages coming from channel C_{k,i}
 ```
 
+## My implementation
+The algorithm was implemented within the chLamLib folder.
+
+Here you can go and analyse the code I have written to be able to use the snapshot algorithm in library mode. by a programmer   
+who is developing a distributed system in Go using gRPC technology.
+
+The library is designed to be used by a programmer who is developing a distributed application using the Go language and the gRPC tool.
+
+![gRPCImage](https://grpc.io/img/logos/grpc-logo.png  =100x) 
+
+![gRPCImage](https://go.dev/images/go-logo-white.svg  =100x)
+
 ## AWS EC2 setup
 ### PowerShell SSH
 Connect to EC2 instance via ssh from PowerShell:
