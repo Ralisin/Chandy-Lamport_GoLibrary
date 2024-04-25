@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "./chLamProto";
+
+message ChLamPeer {
+  string addr = 1;
+}
+
+service ChandyLamportSnapshot {
+  rpc ChLamSnapshot (ChLamPeer) returns (ChLamPeer); // Called by the peer to do snapshot
+}

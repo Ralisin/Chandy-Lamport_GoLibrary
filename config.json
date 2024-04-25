@@ -1,0 +1,14 @@
+{
+  "localhost": {
+    "serviceRegistryAddr": "localhost",
+    "serviceRegistryPort": "3030",
+
+    "peerAddr": ""
+  },
+  "docker": {
+    "serviceRegistryAddr": "serviceRegistry",
+    "serviceRegistryPort": "3030",
+
+    "peerAddr": "peer"
+  }
+}

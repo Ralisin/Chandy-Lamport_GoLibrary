@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  service_registry:
+    build:
+      context: .
+      dockerfile: Docker/DockerfileSR
+    hostname: serviceRegistry
+    ports:
+      - "3030:3030"
+
+  file_read:
+    build:
+      context: .
+      dockerfile: Docker/DockerfileFileRead
+    hostname: peer
+    depends_on:
+      - service_registry
+      - word_counter
+      - saver
+    deploy:
+      replicas: 1
+
+  word_counter:
+    build:
+      context: .
+      dockerfile: Docker/DockerfileWordCounter
+    hostname: peer
+    depends_on:
+      - service_registry
+      - saver
+    deploy:
+      replicas: 1
+
+  saver:
+    build:
+      context: .
+      dockerfile: Docker/DockerfileSaver
+    hostname: peer
+    depends_on:
+      - service_registry
+    deploy:
+      replicas: 1

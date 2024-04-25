@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+// Generic empty response
+message EmptyResponse {}
+
+/**** Peer service ****/
+
+enum CountingRole {
+  FILE_READER = 0;
+  WORD_COUNTER = 1;
+  SAVER = 2;
+}
+
+message Line {
+  string fileName = 1;
+  string line = 2;
+}
+
+service ReaderCounter {
+  rpc CountWord (Line) returns (EmptyResponse);
+}
+
+message LineCount {
+  string fileName = 1;
+  map<string, int32> lineCount = 2;
+}
+
+service CounterSaver {
+  rpc SaveCount(LineCount) returns (EmptyResponse);
+}
+
+/**** Service Registry service ****/
+
+message Peer {
+  string addr = 1;
+  CountingRole role = 2;
+}
+
+message RegisterPeerResponse {
+  Peer peer = 1;
+  repeated Peer peerList = 2;
+}
+
+service ServiceRegistry {
+  rpc RegisterPeer (Peer) returns (RegisterPeerResponse); // Register peer service into Service Registry
+  rpc NewPeerAdded (Peer) returns (EmptyResponse); // Called by Service Registry if entered a new peer
+}

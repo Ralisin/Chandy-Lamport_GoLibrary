@@ -1,0 +1,16 @@
+FROM golang:latest
+
+WORKDIR /app
+
+COPY ../go.mod go.sum ./
+RUN go mod download
+
+COPY ../chLamLib /app/chLamLib
+COPY ../protobuf /app/protobuf
+
+COPY ../config.json /app/config.json
+COPY ../utils /app/utils
+
+COPY ../peer /app/peer
+
+CMD ["sh", "-c", "cd peer && go run . -docker -readFile"]
