@@ -132,3 +132,7 @@ Stop all containers:
 ```sh
 sudo docker stop $(sudo docker ps -a -q)
 ```
+Remove all images:
+```sh
+sudo docker rmi $(sudo docker images -a -q)
+```
