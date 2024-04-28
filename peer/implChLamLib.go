@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-// CountingSnapshot TODO da creare la struct che memorizzi lo snapshot dell'applicazione
 type CountingSnapshot struct {
 	ReadFileGlobalFileName string
 	ReadFileGlobalCurrLine int
@@ -76,7 +75,6 @@ func startRandomlyChLamSnapshot(peerServiceAddr string) {
 	}
 }
 
-// TODO popolare la funzione per fare lo snapshot
 func peerSnapshot() (interface{}, error) {
 	var countingSnap = &CountingSnapshot{}
 

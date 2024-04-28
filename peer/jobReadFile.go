@@ -55,9 +55,6 @@ func jobReadFile(fileName string, currLine int) {
 		var peer *pb.Peer
 		peer, err = utils.GetPeerAddrWithRole(peerList, pb.CountingRole_WORD_COUNTER)
 		if err != nil {
-			// TODO verbose?
-			// log.Printf("[utils.GetPeerAddrWithRole] error: %v", err)
-
 			time.Sleep(time.Second)
 
 			continue
@@ -153,8 +150,6 @@ func sendLineToCounter(addr string, fileName string, line string) error {
 	wordCounter := pb.NewReaderCounterClient(conn)
 
 	message := &pb.Line{
-		// TODO capire quale file name lasciare
-		//FileName: fmt.Sprintf("%s-%s", peerServiceAddr, fileName),
 		FileName: fileName,
 		Line:     line,
 	}

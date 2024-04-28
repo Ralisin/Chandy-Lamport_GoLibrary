@@ -95,7 +95,7 @@ func main() {
 	// Used to register all reflect.Type used in gRPC calls
 	registerCountingType()
 
-	// TODO restore snapshot struct
+	// restore snapshot struct
 	var err error
 	var data interface{}
 	if data, err = chLam.RetrieveDataSnapshot(snapFileName); err != nil {

@@ -154,8 +154,6 @@ func sendWordCountToSaver(addr string, fileName string, lineCount map[string]int
 	saverClient := pb.NewCounterSaverClient(conn)
 
 	message := &pb.LineCount{
-		// TODO capire quale file name lasciare
-		//FileName:  fmt.Sprintf("%s:%s", peerServiceAddr, fileName),
 		FileName:  fileName,
 		LineCount: lineCount,
 	}
