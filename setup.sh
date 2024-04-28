@@ -9,6 +9,6 @@ sudo chmod +x /usr/local/bin/docker-compose
 sudo service docker start
 
 sudo yum install git -y
-git clone https://github.com/Ralisin/chandy-lamport
+git clone https://github.com/Ralisin/Chandy-Lamport_GoLibrary
 
 sudo docker-compose -f compose.yml up

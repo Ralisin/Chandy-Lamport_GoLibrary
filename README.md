@@ -105,7 +105,7 @@ sudo service docker start
 Install git and clone repository
 ```sh
 sudo yum install git -y
-git clone https://github.com/Ralisin/chandyLamportLibrary
+git clone https://github.com/Ralisin/Chandy-Lamport_GoLibrary
 ```
 
 Run docker compose:
