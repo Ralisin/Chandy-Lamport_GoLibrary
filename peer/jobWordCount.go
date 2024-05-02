@@ -121,6 +121,7 @@ func countLine(line *pb.Line) error {
 	wordCountMutex.Lock()
 	if err = sendWordCountToSaver(peer.Addr, line.FileName, globalWordCount[line.FileName]); err != nil {
 		wordCountMutex.Unlock()
+
 		return fmt.Errorf("[countLine] error sendWordCountToSaver: %v", err)
 	}
 	wordCountMutex.Unlock()
@@ -130,13 +131,16 @@ func countLine(line *pb.Line) error {
 	wordCountMutex.Unlock()
 
 	globalLineListMutex.Lock()
-	index := 0
+	index := -1
 	for i, item := range globalLineList {
 		if item == line {
 			index = i
+			break
 		}
 	}
-	globalLineList = append(globalLineList[:index], globalLineList[index+1:]...)
+	if index != -1 {
+		globalLineList = append(globalLineList[:index], globalLineList[index+1:]...)
+	}
 	globalLineListMutex.Unlock()
 
 	return nil
