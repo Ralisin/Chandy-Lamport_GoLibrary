@@ -21,6 +21,7 @@ type interfaceSnap struct {
 }
 
 type methodSnap struct {
+	Ctx         context.Context
 	Req         interfaceSnap
 	ServiceName string
 	MethodName  string
@@ -35,7 +36,7 @@ type snapWrap struct {
 }
 
 // Context key to retrieve peerServerAddress
-const peerSrvAddrKey = "peerSrvAddr"
+const peerSrvAddrKey = "chLamPeerSrvAddr"
 
 // Function passed by the programmer via a library method
 // Must return struct with the snapshot and nil if its call was successful, error != nil otherwise
@@ -156,7 +157,7 @@ func RestoreMethodsSnapshot(fileName string) error {
 		client, err = retrievePeerClient(method.MethodName)
 
 		// I don't care about the answer, they're being only dummy calls
-		_, err = callGRPCMethod(context.Background(), method.MethodName, method.Req, &client)
+		_, err = callGRPCMethod(method.Ctx, method.MethodName, method.Req, &client)
 	}
 
 	return err

@@ -3,6 +3,7 @@ package chLam
 import (
 	"chandyLamportV2/chLamLib/utils"
 	"context"
+	"google.golang.org/grpc/metadata"
 )
 
 func RegisterServerAddr(addr string) {
@@ -35,5 +36,5 @@ func RegisterFunctionRetrieveChLamClient(retrieveFunc func(string) (interface{},
 
 // SetContextChLam is used to set the context with the client's server address so that it can be traced by the interceptor
 func SetContextChLam(ctx context.Context, peerAddr string) context.Context {
-	return context.WithValue(ctx, peerSrvAddrKey, peerAddr)
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(peerSrvAddrKey, peerAddr))
 }

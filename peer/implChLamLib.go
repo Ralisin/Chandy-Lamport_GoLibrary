@@ -11,23 +11,27 @@ import (
 )
 
 type CountingSnapshot struct {
-	ReadFileGlobalFileName string
-	ReadFileGlobalCurrLine int
+	ReadFileFileName string
+	ReadFileCurrLine int
 
-	WordCountGlobalWordCount map[string]map[string]int32
-	WordCountGlobalLine      []*pb.Line
+	WordCountWordCount map[string]int32
+	WordCountLineList  []wordCountData
 
-	SaverGlobalTotalCount map[string]map[string]int32
-	SaverGlobalLineCount  *pb.LineCount
+	SaverTotalCount    map[string]map[string]map[string]int32
+	SaverLineCountList []saverData
 }
 
 func registerCountingType() {
+	// Proto structs
 	chLam.RegisterType((*pb.Peer)(nil))
 	chLam.RegisterType((*pb.CountingRole)(nil))
 	chLam.RegisterType((*pb.EmptyResponse)(nil))
 	chLam.RegisterType((*pb.Line)(nil))
 	chLam.RegisterType((*pb.LineCount)(nil))
 
+	// Internal structs
+	chLam.RegisterType((*wordCountData)(nil))
+	chLam.RegisterType((*saverData)(nil))
 	chLam.RegisterType((*CountingSnapshot)(nil))
 }
 
@@ -80,55 +84,58 @@ func peerSnapshot() (interface{}, error) {
 
 	switch role {
 	case pb.CountingRole_FILE_READER:
-		// *** Store readFile peer ***
-		globalFileNameMutex.Lock()
-		countingSnap.ReadFileGlobalFileName = globalFileName
-		globalFileNameMutex.Unlock()
+		globFileNameMutex.Lock()
+		countingSnap.ReadFileFileName = globFileName
+		globFileNameMutex.Unlock()
 
-		globalCurrLineMutex.Lock()
-		countingSnap.ReadFileGlobalCurrLine = globalCurrLine
-		globalCurrLineMutex.Unlock()
+		globCurrLineMutex.Lock()
+		countingSnap.ReadFileCurrLine = globCurrLine
+		globCurrLineMutex.Unlock()
 
 		break
 	case pb.CountingRole_WORD_COUNTER:
-		// *** Store globalWordCount peer ***
-		copiedWordCount := make(map[string]map[string]int32)
-		wordCountMutex.Lock()
-		for key, innerMap := range globalWordCount {
-			copiedWordCount[key] = make(map[string]int32)
-			for innerKey, innerValue := range innerMap {
-				copiedWordCount[key][innerKey] = innerValue
-			}
-		}
-		wordCountMutex.Unlock()
-		countingSnap.WordCountGlobalWordCount = copiedWordCount
+		lineListMutex.Lock()
+		// Copy list
+		copiedList := make([]wordCountData, len(lineList))
+		copy(copiedList, lineList)
+		lineListMutex.Unlock()
+		countingSnap.WordCountLineList = copiedList
 
-		globalLineListMutex.Lock()
-		copiedGlobalLineList := make([]*pb.Line, len(globalLineList))
-		copy(copiedGlobalLineList, globalLineList)
-		globalLineListMutex.Unlock()
-		countingSnap.WordCountGlobalLine = copiedGlobalLineList
+		copiedMap := make(map[string]int32)
+		// Copy map
+		wordCountMapMutex.Lock()
+		for k, v := range wordCountMap {
+			copiedMap[k] = v
+		}
+		wordCountMapMutex.Unlock()
+		countingSnap.WordCountWordCount = copiedMap
 
 		break
 	case pb.CountingRole_SAVER:
-		// *** Store saver peer ***
-		copiedGlobalTotalCount := make(map[string]map[string]int32)
-		globalTotalCountMutex.Lock()
-		for key, innerMap := range globalTotalCount {
-			copiedGlobalTotalCount[key] = make(map[string]int32)
-			for innerKey, innerValue := range innerMap {
-				copiedGlobalTotalCount[key][innerKey] = innerValue
+		lineCountListMutex.Lock()
+		// Copy list
+		copiedList := make([]saverData, len(lineCountList))
+		copy(copiedList, lineCountList)
+		lineCountListMutex.Unlock()
+
+		copiedMap := make(map[string]map[string]map[string]int32)
+		globTotalCountMutex.Lock()
+		// Copy map
+		for k, v := range globTotalCount {
+			copiedMap[k] = make(map[string]map[string]int32)
+			for k1, v1 := range v {
+				copiedMap[k][k1] = make(map[string]int32)
+				for k2, v2 := range v1 {
+					copiedMap[k][k1][k2] = v2
+				}
 			}
 		}
-		globalTotalCountMutex.Unlock()
-		countingSnap.SaverGlobalTotalCount = copiedGlobalTotalCount
-
-		globalLineCountMutex.Lock()
-		countingSnap.SaverGlobalLineCount = globalLineCount
-		globalLineCountMutex.Unlock()
+		globTotalCountMutex.Unlock()
+		countingSnap.SaverTotalCount = copiedMap
 
 		break
 	}
 
 	return countingSnap, nil
+
 }

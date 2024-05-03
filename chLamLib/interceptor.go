@@ -87,6 +87,7 @@ func storeRemoteProcedureRequestIfSnapshotting(ctx context.Context, req interfac
 
 		// Populate methodSnap struct
 		rpcSnap := methodSnap{
+			Ctx: ctx,
 			Req: interfaceSnap{
 				Bytes: reqBytes,
 				Type:  reqTypeStr,

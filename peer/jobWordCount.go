@@ -4,149 +4,117 @@ import (
 	chLam "chandyLamportV2/chLamLib"
 	"chandyLamportV2/protobuf/pb"
 	"chandyLamportV2/utils"
-	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
+	"google.golang.org/grpc/metadata"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
 
-var (
-	// Key1: fileName, Key2: word, Value: count
-	globalWordCount = make(map[string]map[string]int32)
-	wordCountMutex  sync.Mutex
+type wordCountData struct {
+	Addr     string
+	FileName string
+	Line     string
+}
 
-	globalLineList      []*pb.Line
-	globalLineListMutex sync.Mutex
+var (
+	lineList      = make([]wordCountData, 0)
+	lineListMutex sync.Mutex
+
+	wordCountMap      = make(map[string]int32)
+	wordCountMapMutex sync.Mutex
 )
 
-func jobWordCount(storedWordCount map[string]map[string]int32, storedLine []*pb.Line) {
-	wordCountMutex.Lock()
-	globalWordCount = storedWordCount
-	wordCountMutex.Unlock()
+func jobWordCount(storedLineList []wordCountData, storedWordCountMap map[string]int32) {
+	wordCountMapMutex.Lock()
+	lineList = storedLineList
+	wordCountMapMutex.Unlock()
 
-	globalLineListMutex.Lock()
-	globalLineList = storedLine
-	globalLineListMutex.Unlock()
+	wordCountMapMutex.Lock()
+	wordCountMap = storedWordCountMap
+	wordCountMapMutex.Unlock()
 
-	if storedWordCount == nil {
-		wordCountMutex.Lock()
-		globalWordCount = make(map[string]map[string]int32)
-		wordCountMutex.Unlock()
-	}
+	for {
+		lineListMutex.Lock()
+		lineListLength := len(lineList)
+		lineListMutex.Unlock()
 
-	if storedLine == nil {
-		storedLine = make([]*pb.Line, 0)
-	}
+		if lineListLength == 0 {
+			time.Sleep(time.Second)
 
-	var newStoredLine []*pb.Line
-	for _, line := range storedLine {
-		if line != nil {
-			count := 0
+			continue
+		}
 
-			// Try more than once to count word in a line
-			for {
-				err := countLine(line)
-				if err != nil {
-					if count > 10 {
-						break
-					}
+		peer, err := utils.GetPeerAddrWithRole(peerList, pb.CountingRole_SAVER)
+		if err != nil {
+			time.Sleep(time.Second)
 
-					// If no peer with role SAVER has been found
-					if err.Error() == "peer with role SAVER not found" {
-						count++
+			continue
+		}
 
-						time.Sleep(time.Second)
-
-						continue
-					}
-
-					log.Printf("[jobWordCount] error restoring snapshot: %v", err)
-
-					break
-				}
+		if len(wordCountMap) != 0 {
+			wordCountMapMutex.Lock()
+			err = sendWordCountToSaver1(peer.Addr, lineList[0].FileName, wordCountMap, lineList[0].Addr)
+			wordCountMapMutex.Unlock()
+			if err != nil {
+				continue
 			}
 
-			newStoredLine = append(newStoredLine, line)
-		}
-	}
+			wordCountMapMutex.Lock()
+			lineList = lineList[1:]
+			wordCountMapMutex.Unlock()
 
-	storedLine = newStoredLine
+			wordCountMapMutex.Lock()
+			wordCountMap = make(map[string]int32)
+			wordCountMapMutex.Unlock()
+
+			continue
+		}
+
+		// Define a regular expression pattern to match non-letter and non-number characters (excluding spaces)
+		reg := regexp.MustCompile("[^a-zA-Z0-9\\s]+")
+		lineListMutex.Lock()
+		cleanStr := reg.ReplaceAllString(lineList[0].Line, "")
+		lineListMutex.Unlock()
+
+		// Split
+		words := strings.Fields(cleanStr)
+
+		for len(words) > 0 {
+			wordCountMapMutex.Lock()
+			wordCountMap[words[0]]++
+			wordCountMapMutex.Unlock()
+
+			words = words[1:]
+
+			lineListMutex.Lock()
+			lineList[0].Line = strings.Join(words, " ")
+			lineListMutex.Unlock()
+		}
+
+		wordCountMapMutex.Lock()
+		err = sendWordCountToSaver1(peer.Addr, lineList[0].FileName, wordCountMap, lineList[0].Addr)
+		wordCountMapMutex.Unlock()
+		if err != nil {
+			continue
+		}
+
+		wordCountMapMutex.Lock()
+		lineList = lineList[1:]
+		wordCountMapMutex.Unlock()
+
+		wordCountMapMutex.Lock()
+		wordCountMap = make(map[string]int32)
+		wordCountMapMutex.Unlock()
+	}
 }
 
-func countLine(line *pb.Line) error {
-	var err error
-
-	var peer *pb.Peer
-	peer, err = utils.GetPeerAddrWithRole(peerList, pb.CountingRole_SAVER)
-	if err != nil {
-		return err
-	}
-
-	// Define a regular expression pattern to match non-letter and non-number characters (excluding spaces)
-	reg := regexp.MustCompile("[^a-zA-Z0-9\\s]+")
-	cleanedStr := reg.ReplaceAllString(line.Line, "")
-
-	// Split
-	words := strings.Fields(cleanedStr)
-
-	// Theoretically, this scenario should never occur
-	wordCountMutex.Lock()
-	if globalWordCount == nil {
-		globalWordCount = make(map[string]map[string]int32)
-	}
-	wordCountMutex.Unlock()
-
-	wordCountMutex.Lock()
-	if globalWordCount[line.FileName] == nil {
-		globalWordCount[line.FileName] = make(map[string]int32)
-	}
-	wordCountMutex.Unlock()
-
-	// Count words in line sent
-	for len(words) > 0 {
-		wordCountMutex.Lock()
-		globalWordCount[line.FileName][words[0]]++
-		wordCountMutex.Unlock()
-
-		words = words[1:]
-		line.Line = strings.Join(words, " ")
-	}
-
-	wordCountMutex.Lock()
-	if err = sendWordCountToSaver(peer.Addr, line.FileName, globalWordCount[line.FileName]); err != nil {
-		wordCountMutex.Unlock()
-
-		return fmt.Errorf("[countLine] error sendWordCountToSaver: %v", err)
-	}
-	wordCountMutex.Unlock()
-
-	wordCountMutex.Lock()
-	globalWordCount[line.FileName] = make(map[string]int32)
-	wordCountMutex.Unlock()
-
-	globalLineListMutex.Lock()
-	index := -1
-	for i, item := range globalLineList {
-		if item == line {
-			index = i
-			break
-		}
-	}
-	if index != -1 {
-		globalLineList = append(globalLineList[:index], globalLineList[index+1:]...)
-	}
-	globalLineListMutex.Unlock()
-
-	return nil
-}
-
-func sendWordCountToSaver(addr string, fileName string, lineCount map[string]int32) error {
+func sendWordCountToSaver1(addr string, fileName string, lineCount map[string]int32, originalSenderAddr string) error {
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return errors.New(fmt.Sprintf("did not connect: %v", err))
@@ -164,6 +132,8 @@ func sendWordCountToSaver(addr string, fileName string, lineCount map[string]int
 
 	// Register process to Service Registry
 	ctx := chLam.SetContextChLam(context.Background(), peerServiceAddr)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs(ctxKey, originalSenderAddr))
+
 	_, err = saverClient.SaveCount(ctx, message)
 	if err != nil {
 		return errors.New(fmt.Sprintf("error when calling SaveCount: %s", err))

@@ -12,6 +12,8 @@ import (
 	"net"
 )
 
+const ctxKey = "countingPeerAddr"
+
 var (
 	peerServiceAddr string
 	role            pb.CountingRole
@@ -123,23 +125,23 @@ func main() {
 		if snapStruct == nil {
 			go jobReadFile("", 0)
 		} else {
-			go jobReadFile(snapStruct.ReadFileGlobalFileName, snapStruct.ReadFileGlobalCurrLine)
+			go jobReadFile(snapStruct.ReadFileFileName, snapStruct.ReadFileCurrLine)
 		}
 
 		break
 	case pb.CountingRole_WORD_COUNTER:
 		if snapStruct == nil {
-			jobWordCount(make(map[string]map[string]int32), nil)
+			go jobWordCount(make([]wordCountData, 0), make(map[string]int32))
 		} else {
-			jobWordCount(snapStruct.WordCountGlobalWordCount, snapStruct.WordCountGlobalLine)
+			go jobWordCount(snapStruct.WordCountLineList, snapStruct.WordCountWordCount)
 		}
 
 		break
 	case pb.CountingRole_SAVER:
 		if snapStruct == nil {
-			jobSaver(make(map[string]map[string]int32), nil)
+			go jobSaver(make([]saverData, 0), make(map[string]map[string]map[string]int32))
 		} else {
-			jobSaver(snapStruct.SaverGlobalTotalCount, snapStruct.SaverGlobalLineCount)
+			go jobSaver(snapStruct.SaverLineCountList, snapStruct.SaverTotalCount)
 		}
 		break
 	}

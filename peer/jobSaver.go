@@ -1,88 +1,88 @@
 package main
 
 import (
-	"chandyLamportV2/protobuf/pb"
-	"fmt"
 	"log"
 	"sync"
 	"time"
 )
 
-var (
-	// Key1: fileName, Key2: word, Value: count
-	globalTotalCount      = make(map[string]map[string]int32)
-	globalTotalCountMutex sync.Mutex
-
-	globalLineCount      = &pb.LineCount{}
-	globalLineCountMutex sync.Mutex
-)
-
-func jobSaver(storedTotalCount map[string]map[string]int32, lineCount *pb.LineCount) {
-	if storedTotalCount == nil {
-		globalTotalCountMutex.Lock()
-		globalTotalCount = make(map[string]map[string]int32)
-		globalTotalCountMutex.Unlock()
-	} else {
-		globalTotalCountMutex.Lock()
-		globalTotalCount = storedTotalCount
-		globalTotalCountMutex.Unlock()
-	}
-
-	if lineCount != nil {
-		err := storeTotalCount(lineCount)
-		if err != nil {
-			log.Printf("[jobSaver] error restoring snapshot: %v", err)
-		}
-	}
-
-	globalLineCountMutex.Lock()
-	globalLineCount = &pb.LineCount{}
-	globalLineCountMutex.Unlock()
+type saverData struct {
+	Addr      string
+	FileName  string
+	LineCount map[string]int32
 }
 
-func storeTotalCount(lineCount *pb.LineCount) error {
-	globalTotalCountMutex.Lock()
-	if globalTotalCount == nil {
-		globalTotalCount = make(map[string]map[string]int32)
-	}
-	globalTotalCountMutex.Unlock()
+var (
+	lineCountList      = make([]saverData, 0)
+	lineCountListMutex sync.Mutex
 
-	if lineCount == nil {
-		return fmt.Errorf("nil lineCount")
-	}
+	// peerAddrSender, fileName, word, count
+	globTotalCount      = make(map[string]map[string]map[string]int32)
+	globTotalCountMutex sync.Mutex
+)
 
-	globalLineCountMutex.Lock()
-	globalLineCount = lineCount
-	globalLineCountMutex.Unlock()
+func jobSaver(storedLineCountList []saverData, storedGlobTotalCount map[string]map[string]map[string]int32) {
+	globTotalCountMutex.Lock()
+	globTotalCount = storedGlobTotalCount
+	globTotalCountMutex.Unlock()
 
-	globalTotalCountMutex.Lock()
-	if globalTotalCount[lineCount.FileName] == nil {
-		globalTotalCount[lineCount.FileName] = make(map[string]int32)
-	}
-	globalTotalCountMutex.Unlock()
+	lineCountListMutex.Lock()
+	lineCountList = storedLineCountList
+	lineCountListMutex.Unlock()
 
-	for word, value := range lineCount.LineCount {
-		globalTotalCountMutex.Lock()
-		globalTotalCount[lineCount.FileName][word] += value
-		globalTotalCountMutex.Unlock()
+	for {
+		lineCountListMutex.Lock()
+		lineCountListLength := len(lineCountList)
+		lineCountListMutex.Unlock()
 
-		delete(lineCount.LineCount, word)
+		if lineCountListLength == 0 {
+			time.Sleep(time.Second)
 
-		globalLineCountMutex.Lock()
-		globalLineCount = lineCount
-		globalLineCountMutex.Unlock()
-
-		time.Sleep(250 * time.Millisecond)
-	}
-
-	globalTotalCountMutex.Lock()
-	for key, subMap := range globalTotalCount {
-		fmt.Println(key, ":")
-		for subKey, value := range subMap {
-			fmt.Printf("\t%s: %d\n", subKey, value)
+			continue
 		}
-	}
-	globalTotalCountMutex.Unlock()
 
-	return nil
+		copiedMap := make(map[string]int32)
+		lineCountListMutex.Lock()
+		for key, value := range lineCountList[0].LineCount {
+			copiedMap[key] = value
+		}
+		lineCountListMutex.Unlock()
+
+		lineCountListMutex.Lock()
+		addr, fileName := lineCountList[0].Addr, lineCountList[0].FileName
+		lineCountListMutex.Unlock()
+
+		for word, count := range copiedMap {
+			globTotalCountMutex.Lock()
+			if globTotalCount[addr] == nil {
+				globTotalCount[addr] = make(map[string]map[string]int32)
+			}
+			if globTotalCount[addr][fileName] == nil {
+				globTotalCount[addr][fileName] = make(map[string]int32)
+			}
+			globTotalCount[addr][fileName][word] += count
+			globTotalCountMutex.Unlock()
+
+			lineCountListMutex.Lock()
+			delete(lineCountList[0].LineCount, word)
+			lineCountListMutex.Unlock()
+		}
+
+		lineCountListMutex.Lock()
+		lineCountList = lineCountList[1:]
+		lineCountListMutex.Unlock()
+
+		globTotalCountMutex.Lock()
+		log.Printf("globTotalCount:\n")
+		for peerAddrSender, fileMap := range globTotalCount {
+			log.Printf("\tpeerAddrSender: %v", peerAddrSender)
+			for fName, wordMap := range fileMap {
+				log.Printf("\t\tfileMap: %v", fName)
+				for word, count := range wordMap {
+					log.Printf("\t\t\tword: %v - %v", word, count)
+				}
+			}
+		}
+		globTotalCountMutex.Unlock()
+	}
 }
